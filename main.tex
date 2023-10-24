@@ -1,0 +1,142 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{makecell}
+\usepackage{bbm}
+\usepackage{bm}
+\usepackage{graphicx,psfrag,epsf}
+\usepackage{enumerate}
+\usepackage{natbib}
+\usepackage[singlelinecheck=false]{caption}
+\usepackage{booktabs}
+
+\newcommand{\blind}{0}
+
+\addtolength{\oddsidemargin}{-.75in}%
+\addtolength{\evensidemargin}{-.75in}%
+\addtolength{\textwidth}{1.5in}%
+\addtolength{\textheight}{1.3in}%
+\addtolength{\topmargin}{-.8in}%
+
+
+\begin{document}
+
+
+%\bibliographystyle{natbib}
+
+\def\spacingset#1{\renewcommand{\baselinestretch}%
+{#1}\small\normalsize} \spacingset{1}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\if0\blind
+{
+  \title{\textbf{{\Huge Statistical Design and Analysis Plan}\\[12pt]Investigating postprandial blood glucose responsiveness and the gut microbiome at the individual level: a series of N-of-1 trials}}
+  \author{BiomeHub\\Department of Bioinformatics}
+  \maketitle
+} \fi
+
+\tableofcontents
+
+\spacingset{1.15}
+\section{Statistical study design}
+\label{sec:intro}
+This is a series of 80 N-of-1 trials comparing two diets. The reference treatment is denoted Diet A, while the comparator is Diet B. The primary outcome is the incremental area-under-the-curve (iAUC) of the postprandial blood glucose, measured in $\textrm{mg}\cdot \textrm{hr}\cdot \textrm{L}^{-1}$. The iAUC is based on continuous glucose monitoring with a blood glucose measurement every 30 minutes for 2 hours after breakfast (in addition to a baseline measurement right before the meal). The iAUC is computed using the trapezoid method subtracting the baseline measurement. Within each of the five treatment cycles, each participant undergoes two periods of treatment. Within each treatment period, one diet is consumed and the outcome is measured.
+
+\subsection{Data generating process}
+
+Here we state the full specification of the data generating process used for simulation-based power calculations. It also lays the basis for the primary analysis plan, described in upcoming sections.
+
+Let $Y_{ijk}$ be the iAUC for participant $i=1, 2, \dots, 80$, period $j=1,2$, and cycle $k=1,2,\dots, 5$. Let $X_{ijk}$ be the corresponding treatment indicator variable -- i.e., it is 1 if the $i^{\textrm{th}}$ participant ate diet B in the $j^{\textrm{th}}$ period of the $k^{\textrm{th}}$ cycle, and 0 otherwise. Denote $M_i$ as a continuous score representing the gut microbiome profile for the $i^{\textrm{th}}$ participant at the start of the trial (centred and scaled to variance 1). We then assume
+\begin{align}
+    Y_{ijk} = \alpha_i + \beta_i X_{ijk} + g(k) + \epsilon_{ijk}\label{outcome-model}
+\end{align}
+where $g(k)=\sum_{t=2}^5 \mu_t \cdot \mathbbm{1}\{k=t\}$ is the effect of the $k^{\textrm{th}}$ cycle, for $k=2, \dots, 5$. 
+
+For the $i^{\textrm{th}}$ participant, $\alpha_i$ is their average iAUC under Diet A and $\beta_i$ is the average individual effect of Diet B. Note that $\beta_i$ is an Individual Treatment Effect (ITE), identifiable thanks to the N-of-1 design where each individual participant is considered the population of interest. The independent error term is $\epsilon_{ijk}\sim\mathcal{N}(0, \sigma_{\epsilon}^2)$ and represents the residual variability within participant, period, and cycle.
+The parameter vector
+
+The participant-specific terms are modeled as
+\begin{align}
+    \alpha_i &= \alpha_0 + \tau_1 M_i + u_{1i}\\
+    \beta_i &= \beta_0 + \tau_2 M_i + u_{2i}
+\end{align}
+where $u_{1i}$ and $u_{2i}$ are random intercept and random slope terms, respectively, given by
+\begin{align}
+    \begin{pmatrix}u_{1i}\\u_{2i}\end{pmatrix} \sim \mathcal{N}\Big(
+    \bm{0}, \bm{\Sigma}
+    \Big)\\
+    \bm{\Sigma} = \begin{pmatrix}
+        \sigma_1^2&\sigma_{12}\\
+        \sigma_{12}&\sigma_{2}^2
+    \end{pmatrix}\label{raneff-cov}
+\end{align}
+
+Table \ref{tab:parameters} shows the interpretation for each parameter in the data-generating process specified by (\ref{outcome-model}) --- (\ref{raneff-cov}). In addition to the ITE, $\beta_i$, we can also estimate the overall average treatment effect (ATE) through $\beta_0$. The interaction term $\tau_2$ allows estimating the conditional average treatment effect (CATE) of eating sourdough bread instead of white bread, given the microbiome profile $M_i$ -- i.e., the diet-microbiome interaction.
+\newpage
+\begin{table}[ht]
+    \centering
+    \caption{Parameters of the assumed data-generating process specified by (\ref{outcome-model})---(\ref{raneff-cov}).}
+    \begin{tabular}{c p{12cm} c}
+    \toprule
+        \bf Parameter & \bf Interpretation & \bf \makecell{Simulated\\[1pt]value}\\
+    \midrule
+        $\alpha_i$ & Average iAUC for the $i^{\textrm{th}}$ individual eating white bread  with average microbiome profile (i.e., $M_i=0$)& XX\\[20pt]
+        $\beta_i$ & Average individual effect of diet B for the $i^{\textrm{th}}$ individual (ITE) & XX\\
+        $g(k)$ & Average effect of $k^{\textrm{th}}$ cycle (cycle $k=1$ is the baseline) & XX\\
+        $\alpha_0$ & Overall average iAUC under Diet A& XX\\
+        $\tau_1$ & Average effect on iAUC of increasing $M_i$ by 1 s.d.& XX\\
+        $\beta_0$ & Overall average effect on iAUC of Diet B (ATE)& XX\\
+        $\tau_2$ & Diet-microbiome interaction (CATE)& XX\\
+        $\sigma_1^2$ & Between-participant variance of $u_{1i}$ & XX\\
+        $\sigma_2^2$ & Between-participant variance of $u_{2i}$ & XX\\
+        $\sigma_{12}$ & Covariance between $u_{1i}$ and $u_{2i}$ & 0\\
+        $\sigma_{\epsilon}^2$ & Residual within-participant variance & XX\\
+    \bottomrule
+    \end{tabular}
+    \label{tab:parameters}
+\end{table}
+\newpage
+
+\section{Primary analysis plan}
+
+The primary analysis plan will be based on likelihood-ratio tests at a 5\% significance level, described below for the two primary objectives of the study. Missing data will be handled using Multiple Imputation by Chained Equations.
+
+\subsection{Determining the presence of heterogeneity of the ITEs of Diet B on iAUC.}
+\label{primary-analysis1}
+In light of the data generating process defined by (\ref{outcome-model})---(\ref{raneff-cov}), here the specific question is: does $\beta_i$ vary significantly across participants? Notice that the influence of the microbiome profile $M_i$ does not matter for this question.
+
+The corresponding reduced model is:
+\begin{align}
+    Y_{ijk} &= \alpha_0 + u_{1i} + \beta_0 X_{ijk} + g(k) + \epsilon_{ijk}\label{primary-reduced-model}\\
+\intertext{\indent The full model is:}
+   Y_{ijk} &= \alpha_0 + u_{1i} + (\beta_0 + u_{2i}) X_{ijk} + g(k) + \epsilon_{ijk}\label{primary-full-model}
+\end{align}
+
+In other words, we will test whether the use of a random slope term $u_{2i}$ improves the model fit due to significant variation in the effect of Diet B from participant to participant.
+\subsection{Determining the influence of the gut microbiome on the heterogeneity of the ITEs.}
+\label{primary-analysis2}
+Here the specific question is: does $\beta_i$ vary significantly with $M_i$? If indeed $\beta_i$ varies across participants, then we may be able to explain some of this variation by conditioning on the microbiome profile score $M_i$. This conditional average effect of Diet B given microbiome profile $M_i$ (CATE) can then be used to inform decision-making for future patients, outside the trial.
+
+The corresponding reduced model is:
+\begin{align}
+    Y_{ijk} = \alpha_0 + \tau_1 M_i + u_{1i} + (\beta_0 + u_{2i}) X_{ijk} + g(k) + \epsilon_{ijk}\label{primary2-reduced-model}\\
+\intertext{\indent The full model is:}
+    Y_{ijk} = \alpha_0 + \tau_1 M_i + u_{1i} + (\beta_0 + \tau_2 M_i+ u_{2i}) X_{ijk} + g(k) + \epsilon_{ijk}\label{primary2-full-model}
+\end{align}
+
+So here we are testing whether $\tau_2 = 0$. Notice that Eq. (\ref{primary2-full-model}) is exactly Eq. (\ref{outcome-model}). The underlying linearity assumption between $M_i$ and $\beta_i$ will be relaxed in secondary analysis when estimating the effect of Diet B given an observed microbiome profile score $M_i$ (e.g., using restricted cubic splines).
+\newpage
+\subsection{Sample size and statistical power}
+The sample size was determined by simulation-based power calculation. The simulation setting followed the full data generating process (\ref{outcome-model})---(\ref{raneff-cov}) with parameters defined in Table (\ref{tab:parameters}). The number of participants and of cycles per participant was chosen so that we had at least XXXX\% power for both primary analyses \ref{primary-analysis1} and \ref{primary-analysis2}, assuming a dropout rate of XXXXX\%, at a significance level of 5\%. A relative difference in iAUC of 20\% was used as a minimal clinically important difference. In light of Table (\ref{tab:parameters}), this corresponds to an absolute difference of 12$\textrm{ mg}\cdot \textrm{hr}\cdot \textrm{L}^{-1}$ between diet A and diet B. The parameters $\sigma^2_2$ and $\tau_2$ were set such that $\beta_i$ would be within $\beta_0 \pm 6$ with approximately 95\% probability. This means that the expected difference between the highest individual effect and the lowest individual effect should be close to 12$\textrm{ mg}\cdot \textrm{hr}\cdot \textrm{L}^{-1}$ around 95\% of the time. Given these assumptions and the primary analysis plan described above, the present study required 80 participants with 5 cycles per participant.
+\subsection{Sensitivity analyses}
+Sensitivity analyses will be implemented to check the robustness of the inferences made during the primary analysis. The primary analysis will be repeated by adding another indicator variable to all models corresponding to the allocated treatment sequence. This is to check for any effects of the randomized sequences. To check the dependence of the results on the missing data handling approach, we will also perform a complete case analysis and a Bayesian version of the primary analysis treating each missing data point as a parameter.
+\newpage
+\section{Secondary analyses plan}
+\subsection{Non-linear influence of the gut microbiome score on the heterogeneity of the ITEs}
+Secondary analyses will further explore the influence of the gut microbiome profile on the individual treatment effects of Diet B on the iAUC. First, the relationship between the diet-microbiome interaction will allow for non-linearities using restricted cubic splines.
+\subsection{Exploratory microbiome data analysis}
+Exploratory microbiome data analyses will be implemented, including alpha and beta diversity, differential abundance, and functional analyses.
+\newpage
+\section{Example of primary analysis with simulated data}
+\end{document} 
