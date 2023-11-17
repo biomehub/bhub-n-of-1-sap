@@ -1,14 +1,14 @@
 plot_simulation <- function(
     simulation_output
 ) {
-  df_individual_effects <- simulation_output$individual_effects
-  df <- simulation_output$df
-  theme_set(theme_bw(base_size = 14))
-  plot_indiv_effects <- df_individual_effects %>% 
+  df_individual_effects <- simulation_output$individual_effects %>% 
     mutate(
       # because we predicted at avg(microbiome score)
       true_individual_effect = b - m*simulation_output$t2
-    ) %>% 
+    )
+  df <- simulation_output$df
+  ggplot2::theme_set(ggplot2::theme_minimal(base_size = 14))
+  plot_indiv_effects <- df_individual_effects %>% 
     ggplot(
       aes(
         fct_reorder(factor(patient), estimate, max), 
@@ -59,10 +59,10 @@ plot_simulation <- function(
       color = NULL
     )
   plot_indiv_obs_deltas <- df %>% 
-    select(patient, treatment, cycle, y) %>% 
-    pivot_wider(names_from = treatment, values_from = y) %>% 
-    mutate(d = B - A, patient = factor(patient)) %>% 
-    ggplot(aes(fct_reorder(factor(patient), d, median), d)) +
+    select(patient, diet, cycle, iauc) %>% 
+    pivot_wider(names_from = diet, values_from = iauc) %>% 
+    mutate(d = B - A, patient = patient) %>% 
+    ggplot(aes(fct_reorder(patient, d, median), d)) +
     geom_hline(yintercept = 0, lty = 2, alpha = 0.3, lwd = 1) +
     geom_boxplot() +
     geom_jitter(width = .2) +
@@ -70,23 +70,23 @@ plot_simulation <- function(
       axis.text.x = element_blank()
     ) +
     labs(
-      subtitle = "Observed differences in posprandial blood glucose for each patient",
+      subtitle = "Observed differences in iAUC",
       x = "Individual patients",
-      y = "Delta blood glucose (mg/dL)\n(B-A)"
+      y = "Delta iAUC (mmol*min/L)\n(B-A)"
     )
   
   plot_outcome_distribution <- df %>% 
-    mutate(treatment = paste0("Diet ", treatment)) %>% 
-    ggplot(aes(y)) +
+    mutate(treatment = paste0("Diet ", diet)) %>% 
+    ggplot(aes(iauc)) +
     geom_histogram(bins = 30, fill = "steelblue") +
-    facet_wrap(~treatment) +
+    facet_wrap(~diet) +
     labs(x = "Postprandial blood glucose (mg/dL)",
           y = "Frequency")
   
   plot_observed_differences_by_cycle <- df %>% 
-    select(patient, treatment, cycle, y) %>% 
-    pivot_wider(names_from = treatment, values_from = y) %>% 
-    mutate(d = B - A, patient = factor(patient)) %>% 
+    select(patient, diet, cycle, iauc) %>% 
+    pivot_wider(names_from = diet, values_from = iauc) %>% 
+    mutate(d = B - A, patient = patient) %>% 
     select(-A, -B) %>% 
     pivot_wider(names_from = cycle, values_from = d, names_prefix = "Cycle ") %>% 
     column_to_rownames("patient") %>% 
@@ -97,17 +97,17 @@ plot_simulation <- function(
         ) 
       ),
       title = "Observed differences in posprandial blood glucose for each patient by trial cycle",
-      xlab = "Delta blood glucose (B-A)", 
-      ylab = "Delta blood glucose (B-A)",
+      xlab = "Delta iAUC (B-A)", 
+      ylab = "Delta iAUC (B-A)",
       progress = FALSE
     )
   
   plot_observed_values_by_cycle <- df %>% 
-    select(patient, treatment, cycle, y) %>% 
-    pivot_wider(names_from = treatment, values_from = y) %>% 
+    select(patient, diet, cycle, iauc) %>% 
+    pivot_wider(names_from = diet, values_from = iauc) %>% 
     mutate(d = B - A,
             cycle = paste0("Cycle", cycle),
-            x = fct_reorder(factor(patient), d, median)) %>% 
+            x = fct_reorder(patient, d, median)) %>% 
     ggplot(aes(x = x, xend = x, ymin = A, ymax = B)) +
     geom_errorbar(
       color = "gray40",
@@ -134,6 +134,8 @@ plot_simulation <- function(
       fill = NULL
     )
   
+
+  .lim <- 50
   plot_shrinkage <- df_individual_effects %>% 
     ggplot(
       aes(
@@ -149,19 +151,19 @@ plot_simulation <- function(
     geom_pointrange() +
     geom_errorbarh() +
     geom_point(
-      aes(y = true_individual_effect),
+      aes(y = b),
       color = "red"
     ) +
     labs(
       x = "Summary-based estimates",
       y = "Shrunk estimates"
     ) +
-    coord_cartesian(ylim = )
+    coord_cartesian(ylim = c(-.lim, .lim), xlim = c(-.lim, .lim))
   
   plot_cond_effects <- marginaleffects::plot_cme(
-    fit_full, 
-    "treatment", 
-    "patient_microbiome_score",
+    simulation_output$analysis$fit, 
+    "diet", 
+    "m",
     re.form = ~ 0
   )
   

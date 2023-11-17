@@ -1,4 +1,4 @@
-get_n_of_1_dataset <- function(
+sample_trial_dataset <- function(
     n_patients = 80,
     n_periods = 10,
     sd_epsilon = 10,
@@ -107,7 +107,7 @@ get_n_of_1_dataset <- function(
 }
 
 
-run_primary_analyses <- function(
+run_primary_analysis <- function(
   simulation_output,
   summarise_random_effects = TRUE,
   return_fit_object = TRUE
@@ -172,41 +172,47 @@ run_primary_analyses <- function(
   return(simulation_output)
 }
 
-estimate_individual_effects <- function(simulation_output, m_type = c("average", "observed")) {
+estimate_individual_effects <- function(
+    simulation_output,
+    m_type = c("average", "observed"),
+    bootstrap_samples=200
+  ) {
+
   m_type <- match.arg(m_type)
   if (m_type == "average") {
     m_values = mean(simulation_output$df$m)
   } else {
+    stop("m_type='observed' not implemented.")
     m_values = simulation_output$df %>%
       dplyr::arrange(patient) %>% 
       dplyr::select(patient, m) %>% 
       unique() %>% 
       pull(m)
   }
+
   # get predicted individual effects 
   bootstrap_predictions <- lme4::bootMer(
     simulation_output$analysis$fit,
     nsim = bootstrap_samples, 
     FUN = \(myfit) {
       .pred_data <- expand.grid(
-        patient = levels(simulation_output$df$patient),
-        diet = unique(simulation_output$df$diet)
-      )
-      .pred_data$m = m_values
-      
-      .pred_data$y <- lme4:::predict.merMod(
-        myfit,
-        newdata = .pred_data,
-        re.form = NULL
-      )
-      .pred_data %>% 
-        tidyr::pivot_wider(
-            names_from = diet,
-            values_from = y
-        ) %>% 
-        dplyr::arrange(patient) %>% 
-        dplyr::mutate(d = B - A) %>% 
-        dplyr::pull(d)
+      patient = unique(df$patient),
+      diet = unique(df$diet),
+      m = mean(df$m)
+    )
+    .pred_data$y <- lme4:::predict.merMod(
+      myfit,
+      newdata = .pred_data,
+      re.form = NULL
+    )
+    .pred_data %>% 
+      tidyr::pivot_wider(
+        names_from = treatment,
+        values_from = y
+      ) %>% 
+      dplyr::arrange(patient) %>% 
+      dplyr::mutate(d = B - A) %>% 
+      dplyr::pull(d)
     }, 
     ncpus = 1
   )
