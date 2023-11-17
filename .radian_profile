@@ -1,0 +1,6 @@
+options(radian.color_scheme = "monokai")
+options(max.print = 500)
+cat(cli::col_grey("Loading the tidyverse package.\n"))
+suppressPackageStartupMessages({
+    library(tidyverse)
+})

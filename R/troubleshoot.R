@@ -29,7 +29,7 @@ get_n_of_1_dataset <- function(
     code = {
       expand.grid(
         patient = 1:n_patients,
-        treatment = LETTERS[1:n_treats],
+        treatment = LETTERS[1:2],
         cycle = 1:n_cycles
       ) %>% 
         dplyr::arrange(patient, cycle, treatment) %>% 
@@ -57,6 +57,111 @@ get_n_of_1_dataset <- function(
         )
     }
   )
+}
+
+get_n_of_1_dataset2 <- function(
+    n_patients = 80,
+    n_periods = 10,
+    sd_epsilon = 10,
+    sd1 = 20,
+    sd2 = 5,
+    a0 = 200,
+    b0 = 0,
+    t1 = 2,
+    t2 = 2,
+    g_j = rep(0, n_periods),
+    ite_explainable_fraction = 0.5,
+    possible_sequences = c("ABBABAABBA", "BAABABBAAB"),
+    .seed = 123
+) {
+  withr::with_seed(
+    seed = .seed,
+    code = {
+
+      # generate metadata with random treatment sequence
+      df <- expand.grid(
+        patient = factor(paste0("pt-", 1:n_patients)),
+        period = 1:n_periods
+      ) %>%
+        dplyr::arrange(patient, period) %>%
+        dplyr::group_by(patient) %>%
+        dplyr::mutate(
+          sequence = factor(sample(possible_sequences, 1)),
+          cycle = dplyr::case_when(
+            period <= 2 ~ 1,
+            period <= 4 ~ 2,
+            period <= 6 ~ 3,
+            period <= 8 ~ 4,
+            period <= 10 ~ 5,
+            TRUE ~ NA
+          ),
+          cycle = factor(cycle)
+        ) %>%
+        dplyr::ungroup() %>%
+        dplyr::mutate(
+          diet = purrr::map2_chr(period, sequence, \(j, s) {
+            stringr::str_split(s, "")[[1]][j]
+          }),
+          period = factor(period),
+          m = NA,
+          u1 = NA,
+          u2 = NA,
+          a = NA,
+          b = NA,
+          x = NA,
+          epsilon = NA,
+          iauc = NA
+        )
+
+      # sample random variables
+      M <- rnorm(n = n_patients, sd = 1)
+      u1 <- rnorm(n = n_patients, sd = sd1)
+      u2 <- rnorm(n = n_patients, sd = sd2)
+      epsilon <- matrix(
+        rnorm(n = n_patients * n_periods, sd = sd_epsilon),
+        nrow = n_patients, ncol = n_periods
+      )
+      a <- a0 + t1 * M + u1
+      b <- b0 + t2 * M + u2
+      ## compute Y given everything else
+      X <- Y <- matrix(nrow = n_patients, ncol = n_periods)
+      for (i in seq_len(n_patients)) {
+        patient_i_ix <- df$patient == paste0("pt-", i)
+        df[patient_i_ix, "m"] <- M[i]
+        df[patient_i_ix, "u1"] <- u1[i]
+        df[patient_i_ix, "u2"] <- u2[i]
+        df[patient_i_ix, "a"] <- a[i]
+        df[patient_i_ix, "b"] <- b[i]
+        for (j in seq_len(n_periods)) {
+          ij_ix <- df$patient == paste0("pt-", i) & df$period == j
+          stopifnot(sum(ij_ix) == 1)
+          x_ij <- df$diet[ij_ix] == "B"
+          df[ij_ix, "x"] <- x_ij
+          df[ij_ix, "epsilon"] <- epsilon[i, j]
+          df[ij_ix, "iauc"] <- a[i] + b[i] * x_ij + epsilon[i, j]
+        }
+      }
+
+    }
+  )
+
+  output <- list(
+    df = df,
+    n_patients = n_patients,
+    n_periods = n_periods,
+    sd_epsilon = sd_epsilon,
+    sd1 = sd1,
+    sd2 = sd2,
+    a0 = a0,
+    b0 = b0,
+    t1 = t1,
+    t2 = t2,
+    g_j = g_j,
+    ite_explainable_fraction = ite_explainable_fraction,
+    possible_sequences = possible_sequences,
+    .seed = .seed
+  )
+  return(output)
 }
 
 simulate_n_of_1_trial <- function(

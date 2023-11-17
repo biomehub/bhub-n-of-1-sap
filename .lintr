@@ -1,0 +1,10 @@
+linters: linters_with_defaults(
+        object_usage_linter = NULL,
+        object_name_linter = NULL,
+        line_length_linter = line_length_linter(NA),
+        object_length_linter = NULL,
+        commented_code_linter = NULL,
+        cyclocomp_linter = cyclocomp_linter(complexity_limit = 300L),
+        indentation_linter = NULL
+    ) # see vignette("lintr")
+encoding: "UTF-8"
