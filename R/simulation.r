@@ -1,16 +1,16 @@
 sample_trial_dataset <- function(
     n_patients = 80,
     n_periods = 10,
-    sd_epsilon = 10,
-    sd1 = 20,
-    sd2 = 5,
     a0 = 200,
     b0 = 0,
-    t1 = 2,
-    t2 = 2,
+    t1 = 5,
+    t2 = 5,
+    sd_epsilon = 15,           # within-patient observations vary   +/- 30  (avg. patient: 170 -- 230)
+    sd1 = sqrt(40^2 - t1^2),   # individual averages vary           +/- 80  (patients' avgs: 120 -- 280)
+    sd2 = sqrt(10^2 - t2^2),   # individual effects  vary           +/- 20  (MCID = 40)
     g_j = rep(0, n_periods),
-    ite_explainable_fraction = 0.5,
     possible_sequences = c("ABBABAABBA", "BAABABBAAB"),
+    dropout_rate = 0.15,
     .seed = 123
 ) {
   withr::with_seed(
@@ -56,7 +56,7 @@ sample_trial_dataset <- function(
         )
 
       # sample random variables
-      M <- rnorm(n = n_patients, sd = 1)
+      M <- as.vector(scale(rnorm(n = n_patients)))
       u1 <- rnorm(n = n_patients, sd = sd1)
       u2 <- rnorm(n = n_patients, sd = sd2)
       epsilon <- matrix(
@@ -80,15 +80,33 @@ sample_trial_dataset <- function(
           x_ij <- df$diet[ij_ix] == "B"
           df[ij_ix, "x"] <- x_ij
           df[ij_ix, "epsilon"] <- epsilon[i, j]
-          df[ij_ix, "iauc"] <- a[i] + b[i] * x_ij + epsilon[i, j]
+          df[ij_ix, "iauc"] <- a[i] + b[i] * x_ij + g_j[j] + epsilon[i, j]
         }
       }
 
+      df_dropped <- NULL
+      n_dropped <- 0
+      n_completed <- nrow(df)
+      if (dropout_rate > 0) {
+        dropped_patients <- seq_len(n_patients)[rbinom(n_patients, 1, dropout_rate) == 1]
+        if (length(dropped_patients) > 0) {
+          drop_ix <- df$patient %in% paste0("pt-", dropped_patients)
+          df_dropped <- df[drop_ix, ]
+          df <- df[!drop_ix, ]
+          n_completed <- dplyr::n_distinct(df$patient)
+          n_dropped <- dplyr::n_distinct(df_dropped$patient)
+        }
+      }
     }
   )
 
+  
+
   output <- list(
     df = df,
+    n_completed = n_completed,
+    df_dropped = df_dropped,
+    n_dropped = n_dropped,
     n_patients = n_patients,
     n_periods = n_periods,
     sd_epsilon = sd_epsilon,
@@ -99,7 +117,6 @@ sample_trial_dataset <- function(
     t1 = t1,
     t2 = t2,
     g_j = g_j,
-    ite_explainable_fraction = ite_explainable_fraction,
     possible_sequences = possible_sequences,
     .seed = .seed
   )
@@ -114,13 +131,13 @@ run_primary_analysis <- function(
 ) {
   # patient-by-treatment interaction
   .fit_full1 <- lmerTest::lmer(
-    iauc ~ 1 + diet + (1 + diet | patient),
+    iauc ~ 1 + diet + period + (1 + diet | patient),
     data = simulation_output$df,
     REML = FALSE,
     control = lme4::lmerControl(optCtrl = list(maxfn = 200))
   )
   .fit_null1 <- lmerTest::lmer(
-    iauc ~ 1 + diet + (1 | patient),
+    iauc ~ 1 + diet + period + (1 | patient),
     data = simulation_output$df,
     REML = FALSE,
     control = lme4::lmerControl(optCtrl = list(maxfn = 200))
@@ -128,13 +145,13 @@ run_primary_analysis <- function(
   patient_pval <- anova(.fit_full1, .fit_null1)[["Pr(>Chisq)"]][2]
   # microbiome-by-treatment interaction
   .fit_full2 <- lmerTest::lmer(
-    iauc ~ 1 + m + diet + m:diet + (1 + diet | patient),
+    iauc ~ 1 + m + diet + period + m:diet + (1 + diet | patient),
     data = simulation_output$df,
     REML = TRUE,  # used for estimation and figures
     control = lme4::lmerControl(optCtrl = list(maxfn = 200))
   )
   .fit_null2 <- lmerTest::lmer(
-    iauc ~ 1 + m + diet + (1 + diet | patient),
+    iauc ~ 1 + m + diet + period + (1 + diet | patient),
     data = simulation_output$df,
     REML = FALSE,
     control = lme4::lmerControl(optCtrl = list(maxfn = 200))
@@ -144,9 +161,17 @@ run_primary_analysis <- function(
   # parameter estimates from full model
   fixed_effects <- lme4::fixef(.fit_full2)
   reneff_sds <- attr(lme4::VarCorr(.fit_full2)$patient, "stddev")
+  
+  # adjust p values for multiple comparisons
+  padj <- p.adjust(
+    c("patient" = patient_pval, "microbiome" = microbiome_pval),
+    method = "holm"
+  )
   analysis_summary <- list(
     patient_pval = patient_pval,
+    patient_padj = padj[["patient"]],
     microbiome_pval = microbiome_pval,
+    microbiome_padj = padj[["microbiome"]],
     a0 = fixed_effects[["(Intercept)"]],
     b0 = fixed_effects[["dietB"]],
     t1 = fixed_effects[["m"]],
@@ -191,13 +216,11 @@ estimate_individual_effects <- function(
   }
 
   # get predicted individual effects 
-  bootstrap_predictions <- lme4::bootMer(
-    simulation_output$analysis$fit,
-    nsim = bootstrap_samples, 
-    FUN = \(myfit) {
-      .pred_data <- expand.grid(
+  .get_preds <- function(myfit) {
+    .pred_data <- expand.grid(
       patient = unique(simulation_output$df$patient),
       diet = unique(simulation_output$df$diet),
+      period = factor(1, levels = levels(simulation_output$df$period)),
       m = mean(simulation_output$df$m)
     )
     .pred_data$y <- lme4:::predict.merMod(
@@ -213,7 +236,11 @@ estimate_individual_effects <- function(
       dplyr::arrange(patient) %>% 
       dplyr::mutate(d = B - A) %>% 
       dplyr::pull(d)
-    }, 
+  }
+  bootstrap_predictions <- lme4::bootMer(
+    simulation_output$analysis$fit,
+    nsim = bootstrap_samples, 
+    FUN = .get_preds, 
     ncpus = 1
   )
   
@@ -231,7 +258,7 @@ estimate_individual_effects <- function(
     )
   # individual effects from model predictions
   df_individual_effects <- tibble::tibble(
-    patient = paste0("pt-", 1:simulation_output$n_patients),
+    patient = unique(simulation_output$df$patient),
     estimate = bootstrap_predictions$t0,
     se = apply(bootstrap_predictions$t, 2, sd),
     lower = estimate - qnorm(.975) * se,
@@ -260,7 +287,7 @@ plot_simulation <- function(
   df_individual_effects <- simulation_output$individual_effects %>% 
     mutate(
       # because we predicted at avg(microbiome score)
-      true_individual_effect = b - m + mean(m)
+      true_individual_effect = b - m*simulation_output$t2 + mean(m)*simulation_output$t2
     )
   df <- simulation_output$df
   ggplot2::theme_set(ggplot2::theme_minimal(base_size = 14))
@@ -274,6 +301,15 @@ plot_simulation <- function(
     ) +
     geom_hline(yintercept = 0, lty = 2, alpha = 0.3, lwd = 1) +
     geom_pointrange() +
+    geom_pointrange(
+      aes(
+        x = as.numeric(fct_reorder(factor(patient), estimate, max))-.5,
+        y = avg_delta,
+        ymin = lower_delta,
+        ymax = upper_delta
+        ),
+      color = "#28B463",
+    ) +
     geom_point(
       aes(y = true_individual_effect),
       pch = 18, size = 2, color = "red"
@@ -423,7 +459,7 @@ plot_simulation <- function(
     re.form = ~ 0
   )
   
-  output[["plots"]] <- list(
+  simulation_output[["plots"]] <- list(
     individual_effects = plot_indiv_effects,
     conditional_effects = plot_cond_effects,
     observed_differences = plot_indiv_obs_deltas,
@@ -433,4 +469,6 @@ plot_simulation <- function(
     observed_values_by_cycle = plot_observed_values_by_cycle,
     shrinkage = plot_shrinkage
   )
+
+  return(simulation_output)
 }

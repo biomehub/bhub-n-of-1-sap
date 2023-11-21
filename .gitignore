@@ -51,3 +51,5 @@ rsconnect/
 # Manually added
 *tmp*
 *test*
+output/simulation_runs
+scratch.r

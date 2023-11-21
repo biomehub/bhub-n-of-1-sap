@@ -1,0 +1,2 @@
+setting_id	n_simulation_runs	n_completed_avg	n_dropped_avg	dropout_rate_avg	power_patient	power_microbiome	power_patient_padj	power_microbiome_padj	microbiome_interaction_effect	avg_sd_random_slope
+1	10	68	12	0.15	1	0.9	1	0.9	4.83916629580117	9.246227549962489
