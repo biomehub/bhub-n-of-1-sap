@@ -3,27 +3,38 @@ run_power_simulation <- function(
   n_sim = 10,
   n_threads = 10,
   overall_seed = 1,
-  sim_settings = data.frame(n_patients = 80),
-  overwrite = FALSE
+  sim_settings = expand.grid(n_patients = 80, dropout_rate = c(0.15, 0.2)),
+  overwrite = FALSE,
+  output_dir = paste0("output-", today())
 ) {
   set.seed(overall_seed)
   sim_seeds <- sample(n_sim * 10, size = n_sim)
   results <- vector("list", nrow(sim_settings))
   for (i in seq_len(nrow(sim_settings))) {
     .n_patients <- sim_settings[i, "n_patients"]
+    .dropout_rate <- sim_settings[i, "dropout_rate"]
+    cat(
+      "\nSimulation setting ", i, "\n",
+      "n_patients =", .n_patients, "\t",
+      "dropout_rate =", .dropout_rate, "\n" 
+    )
     
     plan(multisession, workers = n_threads)
     simulations <- future_map_dfr(
       1:n_sim, ~ {
         run_seed <- sim_seeds[.x]
         filename <- paste0("simulation-run-", i, "-", .x, "-seed-", run_seed, ".rds")
-        output_dir <- file.path("output", "simulation_runs", paste0("setting-", i), paste0("run-", .x))
-        dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-        output_rds_file <- file.path(output_dir, filename)
+        .output_dir <- file.path(output_dir, "simulation_runs", paste0("setting-", i))
+        dir.create(.output_dir, showWarnings = FALSE, recursive = TRUE)
+        output_rds_file <- file.path(.output_dir, filename)
         if (file.exists(output_rds_file) & isFALSE(overwrite)) {
           .trial <- readRDS(output_rds_file)
         } else {
-          .trial <- sample_trial_dataset(n_patients = .n_patients, .seed = run_seed) %>% 
+          .trial <- sample_trial_dataset(
+            n_patients = .n_patients,
+            .seed = run_seed,
+            dropout_rate = .dropout_rate
+          ) %>% 
             run_primary_analysis()
             saveRDS(.trial, output_rds_file)
         }
@@ -52,7 +63,7 @@ run_power_simulation <- function(
       simulations,
       here(
         str_glue(
-          "output/simulation_runs/power-sim-setting-{i}-seed-{overall_seed}.tsv"
+          "{output_dir}/simulation_runs/power-sim-setting-{i}-seed-{overall_seed}.tsv"
         )
       )
     )
@@ -68,7 +79,7 @@ run_power_simulation <- function(
         power_microbiome = mean(microbiome_pval < 0.05),
         power_patient_padj = mean(patient_padj < 0.05),
         power_microbiome_padj = mean(microbiome_padj < 0.05),
-        microbiome_interaction_effect = mean(microbiome_interaction_effect),
+        avg_microbiome_interaction_effect = mean(microbiome_interaction_effect),
         avg_sd_random_slope = mean(sd_random_slope)
       )
   }
@@ -77,7 +88,7 @@ run_power_simulation <- function(
       bind_rows(results),
       here(
         str_glue(
-          "output/simulation-results.tsv"
+          "{output_dir}/simulation-results.tsv"
         )
       )
     )

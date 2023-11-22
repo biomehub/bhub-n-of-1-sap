@@ -3,7 +3,7 @@ compute_iauc|function|9a123dcbd491b8cc|||||||||||||||
 estimate_individual_effects|function|6b16ae35ac9258ec|||||||||||||||
 overall_seed|object|7cac4a5fbe48909a|||||||||||||||
 plot_simulation|function|107bbbc8ef3a2b7d|||||||||||||||
-power_simulation|stem|514e0e0802279ba5|7c8eb2c35e341abb|b14eb81078c2ff25|-1947400916||t19682.9715903734s|42453b716dfde1f4|311|rds|local|vector|||12.699||
-run_power_simulation|function|3132017da8bbebce|||||||||||||||
+power_simulation|stem|17faaf9ea1bda3de|a4da082d946a743c|662ad743fee8d435|-1947400916||t19683.0085514827s|c8cda3a0d78c66fb|406|rds|local|vector|||89.07||
+run_power_simulation|function|562bcc2037edf14d|||||||||||||||
 run_primary_analysis|function|658cb138fba73f4e|||||||||||||||
 sample_trial_dataset|function|9db798944af0c6b6|||||||||||||||
