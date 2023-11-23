@@ -1,0 +1,3 @@
+setting_id	n_simulation_runs	n_completed_avg	n_dropped_avg	dropout_rate_avg	power_patient	power_microbiome	power_patient_padj	power_microbiome_padj	avg_microbiome_interaction_effect	avg_sd_random_slope	normal_convergence_proportion	failed_convergence_proportion	singular_convergence_proportion
+1	2000	64	16	0.2	0.96	0.871	0.951	0.8635	5.0355694315798685	8.458794314918302	0.994	0.002	0.004
+2	2000	60	20	0.25	0.946	0.849	0.9365	0.84	5.043046690250399	8.420812137775437	0.991	0.0035	0.0055
