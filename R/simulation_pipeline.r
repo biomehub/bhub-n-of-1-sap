@@ -3,7 +3,7 @@ run_power_simulation <- function(
   n_sim = 10,
   n_threads = 10,
   overall_seed = 1,
-  sim_settings = expand.grid(n_patients = 80, dropout_rate = c(0.15, 0.2)),
+  sim_settings = expand.grid(n_patients = 80, dropout_rate = c(0.2, 0.25)),
   overwrite = FALSE,
   output_dir = paste0("output-", today())
 ) {
@@ -50,7 +50,8 @@ run_power_simulation <- function(
           patient_padj = .trial$analysis$patient_padj,
           microbiome_padj = .trial$analysis$microbiome_padj,
           microbiome_interaction_effect = lme4::fixef(.trial$analysis$fit)[["m:dietB"]],
-          sd_random_slope = attr(lme4::VarCorr(.trial$analysis$fit)$patient, "stddev")[["dietB"]]
+          sd_random_slope = attr(lme4::VarCorr(.trial$analysis$fit)$patient, "stddev")[["dietB"]],
+          fit_convergence = .trial$analysis$fit_convergence
         )
       },
       .options = furrr::furrr_options(seed = overall_seed),
@@ -80,7 +81,10 @@ run_power_simulation <- function(
         power_patient_padj = mean(patient_padj < 0.05),
         power_microbiome_padj = mean(microbiome_padj < 0.05),
         avg_microbiome_interaction_effect = mean(microbiome_interaction_effect),
-        avg_sd_random_slope = mean(sd_random_slope)
+        avg_sd_random_slope = mean(sd_random_slope),
+        normal_convergence_proportion = mean(fit_convergence == "normal"),
+        failed_convergence_proportion = mean(fit_convergence == "failed to converge"),
+        singular_convergence_proportion = mean(fit_convergence == "singular")
       )
   }
 

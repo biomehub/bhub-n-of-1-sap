@@ -29,3 +29,18 @@ compute_iauc <- function(t, y) {
   }
   return(list(auc=sum(auc), segments=auc, seg.type=seg.type))
 }
+
+get_convergence_status <- function (lme4_fit) {
+  
+  if (!inherits(lme4_fit, "merMod")) stop("Error: must pass a lmerMod object")
+
+  if(is.null(unlist(lme4_fit@optinfo$conv$lme4))) {
+    return("normal")
+  }
+
+  if (lme4::isSingular(lme4_fit)) {
+      return("singular")
+  }
+
+  return("failed to converge")
+}

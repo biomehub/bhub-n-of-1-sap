@@ -10,7 +10,7 @@ sample_trial_dataset <- function(
     sd2 = sqrt(10^2 - t2^2),   # individual effects  vary           +/- 20  (MCID = 40)
     g_j = rep(0, n_periods),
     possible_sequences = c("ABBABAABBA", "BAABABBAAB"),
-    dropout_rate = 0.15,
+    dropout_rate = 0.2,
     .seed = 123
 ) {
   withr::with_seed(
@@ -86,16 +86,16 @@ sample_trial_dataset <- function(
 
       df_dropped <- NULL
       n_dropped <- 0
-      n_completed <- nrow(df)
+      n_completed <- n_patients
       if (dropout_rate > 0) {
-        dropped_patients <- seq_len(n_patients)[rbinom(n_patients, 1, dropout_rate) == 1]
-        if (length(dropped_patients) > 0) {
-          drop_ix <- df$patient %in% paste0("pt-", dropped_patients)
-          df_dropped <- df[drop_ix, ]
-          df <- df[!drop_ix, ]
-          n_completed <- dplyr::n_distinct(df$patient)
-          n_dropped <- dplyr::n_distinct(df_dropped$patient)
-        }
+        n_dropped <- round(n_patients * dropout_rate)
+        n_completed <- n_patients - n_dropped
+        dropped_patients <- base::sample(seq_len(n_patients), n_dropped, replace = FALSE)
+        drop_ix <- df$patient %in% paste0("pt-", dropped_patients)
+        df_dropped <- df[drop_ix, ]
+        df <- df[!drop_ix, ]
+        stopifnot(dplyr::n_distinct(df$patient) == n_completed)
+        stopifnot(dplyr::n_distinct(df_dropped$patient) == n_dropped)
       }
     }
   )
@@ -134,13 +134,13 @@ run_primary_analysis <- function(
     iauc ~ 1 + diet + period + (1 + diet | patient),
     data = simulation_output$df,
     REML = FALSE,
-    control = lme4::lmerControl(optCtrl = list(maxfn = 200))
+    control = lme4::lmerControl(optCtrl = list(maxfn = 500))
   )
   .fit_null1 <- lmerTest::lmer(
     iauc ~ 1 + diet + period + (1 | patient),
     data = simulation_output$df,
     REML = FALSE,
-    control = lme4::lmerControl(optCtrl = list(maxfn = 200))
+    control = lme4::lmerControl(optCtrl = list(maxfn = 500))
   )
   patient_pval <- anova(.fit_full1, .fit_null1)[["Pr(>Chisq)"]][2]
   # microbiome-by-treatment interaction
@@ -192,6 +192,8 @@ run_primary_analysis <- function(
   if (isTRUE(return_fit_object)) {
     analysis_summary[["fit"]] <- .fit_full2
   }
+
+  analysis_summary[["fit_convergence"]] <- get_convergence_status(.fit_full2)
   
   simulation_output[["analysis"]] <- analysis_summary
   return(simulation_output)

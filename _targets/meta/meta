@@ -1,9 +1,10 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
 compute_iauc|function|9a123dcbd491b8cc|||||||||||||||
 estimate_individual_effects|function|6b16ae35ac9258ec|||||||||||||||
-overall_seed|object|7cac4a5fbe48909a|||||||||||||||
+get_convergence_status|function|83cc6cc4cd25a573|||||||||||||||
+overall_seed|object|ed96028efe53f06d|||||||||||||||
 plot_simulation|function|107bbbc8ef3a2b7d|||||||||||||||
-power_simulation|stem|4b8978c12b62d7cb|2d9aa3c53353c5c8|ac460534b18b2b21|-1947400916||t19683.0254807333s|734eed8d6fa94b1a|434|rds|local|vector|||695.413|Model failed to converge with maxgrad  0.00232911 tol  0.002, component 1. Model failed to converge with maxgrad  0.00306421 tol  0.002, component 1. Model failed to converge with maxgrad  0.00662586 tol  0.002, component 1. Model failed to converge with maxgrad  0.00230045 tol  0.002, component 1. Model failed to converge with maxgrad  0.00466921 tol  0.002, component 1. Model failed to converge with maxgrad  0.00236028 tol  0.002, component 1. Model failed to converge with maxgrad  0.00344091 tol  0.002, component 1. Model failed to converge with maxgrad  0.00215331 tol  0.002, component 1. Model failed to converge with maxgrad  0.00248401 tol  0.002, component 1. Model failed to converge with maxgrad  0.00566718 tol  0.002, component 1. Model failed to converge with maxgrad  0.00368256 tol  0.002, component 1. Model failed to converge with maxgrad  0.00239203 tol  0.002, component 1. Model failed to converge with maxgrad  0.00236776 tol  0.002, component 1. Model failed to converge with maxgrad  0.00299696 tol  0.002, component 1. Model failed to converge with maxgrad  0.00219183 tol  0.002, component 1. Model failed to converge with maxgrad  0.00234444 tol  0.002, component 1. Model failed to converge with maxgrad  0.00207469 tol  0.002, component 1. Model failed to converge with maxgrad  0.0070215 tol  0.002, component 1. Model failed to converge with maxgrad  0.00392133 tol  0.002, component 1. Model failed to converge with maxgrad  0.0195931 tol  0.002, component 1. Model failed to converge with maxgrad  0.00225461 tol  0.002, component 1. Model failed to converge with maxgrad  0.00201881 tol  0.002, component 1. Model failed to converge with 1 negative eigenvalue 2.3e01. unable to evaluate scaled gradient. Model failed to converge degenerate  Hessian with 1 negative eigenvalues. Model failed to converge with 1 negative eigenvalue 2.1e01. Model failed to converge with m|
-run_power_simulation|function|25e7d7242ad53e9c|||||||||||||||
-run_primary_analysis|function|658cb138fba73f4e|||||||||||||||
-sample_trial_dataset|function|9db798944af0c6b6|||||||||||||||
+power_simulation|stem|5c9b2a4965afc06e|9a5eb5dd15b5bdb3|b01ae5da4effdf63|-1947400916||t19684.8475499999s|f586e7aff6cad421|396|rds|local|vector|||27.167||
+run_power_simulation|function|89baa03b526e14a6|||||||||||||||
+run_primary_analysis|function|ec3ae02a5e1a923f|||||||||||||||
+sample_trial_dataset|function|dac29de64a0aa13e|||||||||||||||
