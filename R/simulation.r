@@ -148,13 +148,13 @@ run_primary_analysis <- function(
     iauc ~ 1 + m + diet + period + m:diet + (1 + diet | patient),
     data = simulation_output$df,
     REML = TRUE,  # used for estimation and figures
-    control = lme4::lmerControl(optCtrl = list(maxfn = 200))
+    control = lme4::lmerControl(optCtrl = list(maxfn = 500))
   )
   .fit_null2 <- lmerTest::lmer(
     iauc ~ 1 + m + diet + period + (1 + diet | patient),
     data = simulation_output$df,
     REML = FALSE,
-    control = lme4::lmerControl(optCtrl = list(maxfn = 200))
+    control = lme4::lmerControl(optCtrl = list(maxfn = 500))
   )
   microbiome_pval <- anova(lme4::refitML(.fit_full2), .fit_null2)[["Pr(>Chisq)"]][2]
 
